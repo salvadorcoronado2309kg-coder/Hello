@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase-server';
+import { getSessionUser } from '@/lib/auth';
 import LogoutButton from './LogoutButton';
 
 export default async function DashboardLayout({
@@ -8,14 +8,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
+  const session = await getSessionUser();
+  if (!session) redirect('/login');
+  const user = { id: session.userId, email: session.email };
 
   const navItems = [
     {

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase';
 import { RegimenITBIS } from '@/types';
 
 export default function RegisterPage() {
@@ -42,42 +41,19 @@ export default function RegisterPage() {
     setCargando(true);
 
     try {
-      const supabase = createClient();
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, razon_social: razonSocial, rnc_cedula: rncCedula, regimen_itbis: regimenITBIS }),
       });
-
-      if (authError) {
-        if (authError.message.includes('already registered')) {
-          setError('Este correo electrónico ya está registrado.');
-        } else {
-          setError(authError.message);
-        }
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || 'Error al registrar');
         return;
       }
 
-      if (authData.user) {
-        const { error: clienteError } = await supabase.from('clientes').insert({
-          id: authData.user.id,
-          razon_social: razonSocial,
-          rnc_cedula: rncCedula,
-          regimen_itbis: regimenITBIS,
-          activo: true,
-        });
-
-        if (clienteError) {
-          console.error('Error al crear cliente:', clienteError);
-          setError('Usuario creado pero hubo un error al guardar los datos de empresa. Contacte soporte.');
-          return;
-        }
-      }
-
       setExito(true);
-      setTimeout(() => {
-        router.push('/login');
-      }, 3000);
+      setTimeout(() => { router.push('/dashboard/registros'); }, 1500);
     } catch {
       setError('Ocurrió un error inesperado. Por favor intente de nuevo.');
     } finally {
@@ -96,7 +72,7 @@ export default function RegisterPage() {
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Registro Exitoso</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Su cuenta ha sido creada. Por favor revise su correo electrónico para confirmar su cuenta.
+            Su cuenta ha sido creada exitosamente. Redirigiendo al dashboard…
           </p>
           <p className="text-xs text-gray-400">Redirigiendo al inicio de sesión...</p>
         </div>

@@ -87,15 +87,15 @@ export default function ExportarPage() {
       if (queryError) throw new Error(queryError.message);
 
       const registros = data || [];
-      const validados = registros.filter((r) => r.estado === 'validado');
-      const pendientes = registros.filter((r) => r.estado === 'pendiente');
+      const validados = registros.filter((r: any) => r.estado === 'validado');
+      const pendientes = registros.filter((r: any) => r.estado === 'pendiente');
 
       setResumen({
         total: registros.length,
         validados: validados.length,
         pendientes: pendientes.length,
-        totalFacturado: validados.reduce((sum, r) => sum + (r.total_facturado || 0), 0),
-        totalITBIS: validados.reduce((sum, r) => sum + (r.itbis_facturado || 0), 0),
+        totalFacturado: validados.reduce((sum: any, r: any) => sum + (r.total_facturado || 0), 0),
+        totalITBIS: validados.reduce((sum: any, r: any) => sum + (r.itbis_facturado || 0), 0),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al consultar resumen');

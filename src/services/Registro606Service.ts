@@ -73,7 +73,7 @@ export class Registro606Service {
     if (error) throw new Error(error.message);
 
     return {
-      datos: (data ?? []).map(r => mapearRegistro(r as Record<string, unknown>)),
+      datos: (data ?? []).map((r: any) => mapearRegistro(r as Record<string, unknown>)),
       total: count ?? 0,
     };
   }
@@ -165,7 +165,7 @@ export class Registro606Service {
       .eq('estado', EstadoRegistro.VALIDADO)
       .like('fecha_comprobante', `${periodo}%`);
     if (error) throw new Error(error.message);
-    return (data ?? []).map(r => mapearRegistro(r as Record<string, unknown>));
+    return (data ?? []).map((r: any) => mapearRegistro(r as Record<string, unknown>));
   }
 }
 
