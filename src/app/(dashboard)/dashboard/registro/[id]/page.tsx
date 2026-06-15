@@ -134,6 +134,12 @@ export default function DetalleRegistroPage() {
         </div>
         <div className="flex items-center gap-3">
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${badge.color}`}>{badge.label}</span>
+          {registro.estado !== EstadoRegistro.REPORTADO && (
+            <Link href={`/dashboard/registro/${registro.id}/editar`}
+              className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-sm font-medium border border-gray-200 transition">
+              Editar
+            </Link>
+          )}
           <button onClick={handleEliminar} disabled={eliminando || registro.estado === EstadoRegistro.REPORTADO}
             className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-sm font-medium border border-red-200 disabled:opacity-40 transition">
             {eliminando ? 'Eliminando…' : 'Eliminar'}
