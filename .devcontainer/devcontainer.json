@@ -1,0 +1,18 @@
+{
+  "name": "Form 606 DGII",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "postCreateCommand": "npm install && mkdir -p data && node -e \"const fs=require('fs'); if(!fs.existsSync('.env.local')) fs.writeFileSync('.env.local', 'JWT_SECRET=' + require('crypto').randomBytes(32).toString('hex') + '\\nDATABASE_PATH=./data/form606.db\\n');\"",
+  "postStartCommand": "npm run dev",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Form 606 DGII",
+      "onAutoForward": "openPreview",
+      "visibility": "public"
+    }
+  },
+  "features": {},
+  "remoteEnv": {
+    "NODE_ENV": "development"
+  }
+}
