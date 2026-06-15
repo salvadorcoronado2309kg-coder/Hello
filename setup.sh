@@ -12,6 +12,9 @@ echo "╔═══════════════════════�
 echo "║     Form 606 DGII — Instalación       ║"
 echo "╚════════════════════════════════════════╝"
 echo -e "${NC}"
+echo "  No necesitas Supabase ni ninguna cuenta externa."
+echo "  La base de datos se crea automáticamente en tu equipo."
+echo ""
 
 # ── Verificar Node.js ──────────────────────────────────────────────────────────
 if ! command -v node &>/dev/null; then
@@ -33,40 +36,26 @@ echo -e "${AZUL}▶ Instalando dependencias...${NC}"
 npm install
 echo -e "${VERDE}✓ Dependencias instaladas${NC}"
 
-# ── Configurar variables de entorno ───────────────────────────────────────────
+# ── Crear .env.local si no existe ─────────────────────────────────────────────
 echo ""
 if [[ -f .env.local ]]; then
-  echo -e "${AMARILLO}⚠  .env.local ya existe — se omite la configuración.${NC}"
+  echo -e "${AMARILLO}⚠  .env.local ya existe — se omite.${NC}"
 else
-  echo -e "${AZUL}▶ Configuración de Supabase${NC}"
-  echo "  Necesitas el URL y la clave anon de tu proyecto Supabase."
-  echo "  Si aún no tienes proyecto: https://supabase.com → New Project"
-  echo ""
-
-  read -p "  NEXT_PUBLIC_SUPABASE_URL (ej: https://xxxx.supabase.co): " SUPA_URL
-  read -p "  NEXT_PUBLIC_SUPABASE_ANON_KEY (empieza con eyJ...): " SUPA_KEY
-
-  if [[ -z "$SUPA_URL" || -z "$SUPA_KEY" ]]; then
-    echo -e "${AMARILLO}⚠  Credenciales vacías — creando .env.local con marcadores de posición.${NC}"
-    SUPA_URL="https://TU-PROYECTO.supabase.co"
-    SUPA_KEY="eyJ...TU_CLAVE_ANON"
-  fi
-
+  # Genera un secreto JWT aleatorio
+  JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
   cat > .env.local <<EOF
-NEXT_PUBLIC_SUPABASE_URL=${SUPA_URL}
-NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPA_KEY}
+JWT_SECRET=${JWT_SECRET}
+DATABASE_PATH=./data/form606.db
 EOF
-  echo -e "${VERDE}✓ .env.local creado${NC}"
+  echo -e "${VERDE}✓ .env.local creado con clave JWT segura${NC}"
 fi
 
-# ── Recordatorio migración SQL ─────────────────────────────────────────────────
-echo ""
-echo -e "${AMARILLO}══ Recuerda aplicar la migración SQL en Supabase ══${NC}"
-echo "   Panel Supabase → SQL Editor → abre y ejecuta:"
-echo "   📄 migrations/001_initial_schema.sql"
-echo ""
+# ── Crear carpeta de datos ─────────────────────────────────────────────────────
+mkdir -p data
+echo -e "${VERDE}✓ Carpeta data/ lista${NC}"
 
 # ── Construir o arrancar dev ───────────────────────────────────────────────────
+echo ""
 echo -e "${AZUL}▶ ¿Qué quieres hacer?${NC}"
 echo "  1) Arrancar servidor de desarrollo (npm run dev)"
 echo "  2) Construir para producción (npm run build)"
@@ -79,6 +68,7 @@ case "$OPCION" in
   1)
     echo ""
     echo -e "${VERDE}✓ Iniciando servidor en http://localhost:3000${NC}"
+    echo -e "  Abre el navegador en ${AZUL}http://localhost:3000${NC}"
     echo -e "  Presiona ${AZUL}Ctrl+C${NC} para detener."
     echo ""
     npm run dev
