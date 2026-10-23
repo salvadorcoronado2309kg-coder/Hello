@@ -317,15 +317,15 @@ export const Dashboard606: React.FC<Dashboard606Props> = ({ cliente, registroIni
                   <select value={registro.tipoRetencionISR || ''} onChange={(e) => handleRetencionISR(e.target.value, registro.montoRetencionISR || 0)}
                     className="w-full px-3 py-2 border border-gray-300 rounded text-sm">
                     <option value="">-- Sin retención --</option>
-                    <option value="01">01 - Servicios Profesionales (10%)</option>
-                    <option value="02">02 - Alquileres (10%)</option>
-                    <option value="03">03 - Servicios Técnicos (2%)</option>
-                    <option value="04">04 - Transporte (2%)</option>
-                    <option value="05">05 - Otros Servicios (2%)</option>
-                    <option value="06">06 - Telecomunicaciones (2%)</option>
-                    <option value="07">07 - Construcción (2%)</option>
-                    <option value="08">08 - Servicios Financieros (1%)</option>
-                    <option value="09">09 - Compra de Bienes (0%)</option>
+                    <option value="01">01 — Alquileres</option>
+                    <option value="02">02 — Honorarios por servicios</option>
+                    <option value="03">03 — Otras rentas</option>
+                    <option value="04">04 — Otras rentas (rentas presuntas)</option>
+                    <option value="05">05 — Intereses pagados a personas jurídicas residentes</option>
+                    <option value="06">06 — Intereses pagados a personas físicas residentes</option>
+                    <option value="07">07 — Retención por proveedores del Estado</option>
+                    <option value="08">08 — Juegos telefónicos</option>
+                    <option value="09">09 — Retenciones subsector ganadería de carne bovina</option>
                   </select>
                 </div>
                 <div>

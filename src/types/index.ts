@@ -339,12 +339,12 @@ export const PORCENTAJES_RETENCION_ISR: Record<string, number> = {
 
 export const ETIQUETAS_FORMA_PAGO: Record<string, string> = {
   '01': 'Efectivo',
-  '02': 'Cheque / Transferencia',
-  '03': 'Tarjeta de Crédito',
-  '04': 'Crédito',
+  '02': 'Cheques/transferencias/depósito',
+  '03': 'Tarjeta crédito/débito',
+  '04': 'Compra a crédito',
   '05': 'Permuta',
-  '06': 'Venta a Plazo',
-  '07': 'Otro'
+  '06': 'Nota de crédito',
+  '07': 'Mixto'
 };
 
 // Tipos de bienes y servicios comprados del formato 606 (casilla 3).

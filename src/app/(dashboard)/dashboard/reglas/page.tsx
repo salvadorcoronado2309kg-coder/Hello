@@ -18,15 +18,15 @@ interface ReglaRow {
 }
 
 const TIPO_RETENCION_ISR: Record<string, string> = {
-  '01': '01 — Serv. Profesionales (10%)',
-  '02': '02 — Alquileres (10%)',
-  '03': '03 — Serv. Técnicos (2%)',
-  '04': '04 — Transporte (2%)',
-  '05': '05 — Otros Servicios (2%)',
-  '06': '06 — Telecomunicaciones (2%)',
-  '07': '07 — Construcción (2%)',
-  '08': '08 — Serv. Financieros (1%)',
-  '09': '09 — Compra de Bienes (0%)',
+  '01': '01 — Alquileres',
+  '02': '02 — Honorarios por servicios',
+  '03': '03 — Otras rentas',
+  '04': '04 — Otras rentas (rentas presuntas)',
+  '05': '05 — Intereses pagados a personas jurídicas residentes',
+  '06': '06 — Intereses pagados a personas físicas residentes',
+  '07': '07 — Retención por proveedores del Estado',
+  '08': '08 — Juegos telefónicos',
+  '09': '09 — Retenciones subsector ganadería de carne bovina',
 };
 
 const FORM_INICIAL = {
