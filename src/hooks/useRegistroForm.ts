@@ -6,7 +6,7 @@ import { CreateRegistro606DTO, TipoID } from '@/types';
 const ESTADO_INICIAL: CreateRegistro606DTO = {
   rncCedula: '',
   tipoID: TipoID.RNC,
-  tipoBienServicio: '05',
+  tipoBienServicio: '02',
   ncf: '',
   fechaComprobante: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
   montoServicios: 0,

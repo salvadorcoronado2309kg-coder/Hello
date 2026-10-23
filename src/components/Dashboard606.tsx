@@ -24,7 +24,7 @@ export const Dashboard606: React.FC<Dashboard606Props> = ({ cliente, registroIni
     registroInicial || {
       rncCedula: '',
       tipoID: TipoID.RNC,
-      tipoBienServicio: '05',
+      tipoBienServicio: '02',
       ncf: '',
       fechaComprobante: new Date().toISOString().split('T')[0].replace(/-/g, ''),
       montoServicios: 0,
@@ -112,7 +112,7 @@ export const Dashboard606: React.FC<Dashboard606Props> = ({ cliente, registroIni
   };
 
   const resetForm = () => setRegistro({
-    rncCedula: '', tipoID: TipoID.RNC, tipoBienServicio: '05', ncf: '',
+    rncCedula: '', tipoID: TipoID.RNC, tipoBienServicio: '02', ncf: '',
     fechaComprobante: new Date().toISOString().split('T')[0].replace(/-/g, ''),
     montoServicios: 0, montoBienes: 0, itbisFacturado: 0, formaPago: '02',
     montoRetencionISR: 0, isc: 0, otrosImpuestos: 0, propinaLegal: 0
