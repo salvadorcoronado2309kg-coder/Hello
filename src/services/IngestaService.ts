@@ -49,7 +49,7 @@ export class IngestaService {
       facturaExtraida.montoSubtotal,
       facturaExtraida.montoServicios,
       facturaExtraida.montoBienes,
-      reglaProveedor?.tipoBienServicioDefecto || '05'
+      reglaProveedor?.tipoBienServicioDefecto || '02'
     );
 
     const itbisFacturado = facturaExtraida.montoITBIS ||
@@ -58,7 +58,7 @@ export class IngestaService {
     const dto: CreateRegistro606DTO = {
       rncCedula: rncNormalizado,
       tipoID,
-      tipoBienServicio: reglaProveedor?.tipoBienServicioDefecto || '05',
+      tipoBienServicio: reglaProveedor?.tipoBienServicioDefecto || '02',
       ncf: ncfNormalizado,
       fechaComprobante: fechaNormalizada,
       montoServicios,
@@ -407,7 +407,7 @@ export class IngestaService {
     }
     const total = subtotal || 0;
     if (total === 0) return { montoServicios: 0, montoBienes: 0 };
-    const esServicio = ['05', '09', '10'].includes(tipoBienServicioDefecto);
+    const esServicio = !['04', '09', '10'].includes(tipoBienServicioDefecto); // bienes: activos fijos, costo de venta y adquisición de activos
     return esServicio ? { montoServicios: total, montoBienes: 0 } : { montoServicios: 0, montoBienes: total };
   }
 

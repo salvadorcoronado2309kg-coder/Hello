@@ -16,17 +16,17 @@ export enum EstadoRegistro {
 }
 
 export enum TipoBienServicio {
-  COMBUSTIBLES = '01',
-  MATERIAS_PRIMAS = '02',
-  REPUESTOS_ACCESORIOS = '03',
-  EQUIPOS = '04',
-  SERVICIOS = '05',
-  ACTIVOS_FIJOS = '06',
-  GASTOS_MENORES = '07',
-  PAGOS_EXTERIOR = '08',
-  TELECOMUNICACIONES = '09',
-  ALQUILERES = '10',
-  OTROS = '11'
+  GASTOS_PERSONAL = '01',
+  GASTOS_SERVICIOS = '02',
+  ARRENDAMIENTOS = '03',
+  ACTIVOS_FIJOS = '04',
+  REPRESENTACION = '05',
+  OTRAS_DEDUCCIONES = '06',
+  GASTOS_FINANCIEROS = '07',
+  GASTOS_EXTRAORDINARIOS = '08',
+  COSTO_VENTA = '09',
+  ADQUISICION_ACTIVOS = '10',
+  GASTOS_SEGUROS = '11'
 }
 
 export enum FormaPago {
@@ -347,18 +347,19 @@ export const ETIQUETAS_FORMA_PAGO: Record<string, string> = {
   '07': 'Otro'
 };
 
+// Tipos de bienes y servicios comprados del formato 606 (casilla 3).
 export const ETIQUETAS_TIPO_BIEN_SERVICIO: Record<string, string> = {
-  '01': 'Combustibles y Lubricantes',
-  '02': 'Materias Primas',
-  '03': 'Repuestos y Accesorios',
-  '04': 'Equipos',
-  '05': 'Servicios',
-  '06': 'Activos Fijos',
-  '07': 'Gastos Menores',
-  '08': 'Pagos al Exterior',
-  '09': 'Telecomunicaciones',
-  '10': 'Alquileres',
-  '11': 'Otros'
+  '01': 'Gastos de personal',
+  '02': 'Gastos por trabajos, suministros y servicios',
+  '03': 'Arrendamientos',
+  '04': 'Gastos de activos fijos',
+  '05': 'Gastos de representación',
+  '06': 'Otras deducciones admitidas',
+  '07': 'Gastos financieros',
+  '08': 'Gastos extraordinarios',
+  '09': 'Compras y gastos que forman parte del costo de venta',
+  '10': 'Adquisiciones de activos',
+  '11': 'Gastos de seguros'
 };
 
 export const PORCENTAJE_ITBIS_ESTANDAR = 0.18;

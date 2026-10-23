@@ -8,7 +8,7 @@ import { getSessionUserFromRequest } from '@/lib/auth';
 
 const MAX_ROWS = 2000;
 const TIPOS_BIEN = new Set(['01','02','03','04','05','06','07','08','09','10','11']);
-const BIENES = new Set(['09','10']); // lo demás se registra como servicios; revisar con contador
+const BIENES = new Set(['04','09','10']); // bienes; el resto se registra como servicios. Revisar con contador
 
 type Fila = Record<string, unknown>;
 
