@@ -31,7 +31,7 @@ const TIPO_RETENCION_ISR: Record<string, string> = {
 
 const FORM_INICIAL = {
   rnc_proveedor: '',
-  tipo_bien_servicio_defecto: '05',
+  tipo_bien_servicio_defecto: '02',
   forma_pago_defecto: '02',
   tipo_retencion_isr_defecto: '',
   concepto_defecto: '',
