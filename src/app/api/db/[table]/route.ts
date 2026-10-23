@@ -11,91 +11,113 @@ const HAS_CLIENTE_FK = new Set([
   'registros_606', 'reglas_categorizacion', 'auditoria_registros', 'exportaciones_606',
 ]);
 
+const IDENT = /^[a-z_][a-z0-9_]*$/i;
+const MAX_LIMIT = 1000;
+
 type Params = Promise<{ table: string }>;
+type Scope = { sql: string; vals: string[] };
+
+// Columnas reales de la tabla (desde SQLite). Nada que no esté aquí llega al SQL.
+const colCache = new Map<string, Set<string>>();
+function columnas(table: string): Set<string> {
+  const hit = colCache.get(table);
+  if (hit) return hit;
+  const rows = getDB().prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  const set = new Set(rows.map(r => r.name));
+  colCache.set(table, set);
+  return set;
+}
+function colOk(table: string, col: string): boolean {
+  return IDENT.test(col) && columnas(table).has(col);
+}
+
+function bad(msg: string, status = 400) {
+  return NextResponse.json({ data: null, error: { message: msg } }, { status });
+}
 
 async function getClienteId(userId: string): Promise<string | null> {
-  const db = getDB();
-  const row = db.prepare('SELECT id FROM clientes WHERE user_id = ?').get(userId) as { id: string } | undefined;
+  const row = getDB().prepare('SELECT id FROM clientes WHERE user_id = ?').get(userId) as { id: string } | undefined;
   return row?.id ?? null;
 }
 
-export async function GET(req: NextRequest, { params }: { params: Params }) {
+// Alcance fijo del usuario: nunca viene del cliente.
+async function scopeFor(table: string, userId: string): Promise<Scope | null> {
+  if (table === 'clientes') return { sql: 'user_id = ?', vals: [userId] };
+  const cid = await getClienteId(userId);
+  if (!cid) return null;
+  return { sql: 'id_cliente = ?', vals: [cid] };
+}
+
+async function authorize(req: NextRequest, params: Params) {
   const { table } = await params;
-  if (!ALLOWED.has(table)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
+  if (!ALLOWED.has(table)) return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) } as const;
   const user = await getSessionUserFromRequest(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) } as const;
+  const scope = await scopeFor(table, user.userId);
+  if (!scope) return { error: bad('Cliente no encontrado para este usuario') } as const;
+  return { table, user, scope } as const;
+}
 
-  const clienteId = await getClienteId(user.userId);
+export async function GET(req: NextRequest, { params }: { params: Params }) {
+  const auth = await authorize(req, params);
+  if ('error' in auth) return auth.error;
+  const { table, scope } = auth;
 
-  const url = new URL(req.url);
-  const sp = url.searchParams;
-
-  // Build WHERE
-  const whereParts: string[] = [];
-  const whereVals: unknown[] = [];
-
-  // Security: scope by ownership
-  if (table === 'clientes') {
-    whereParts.push('user_id = ?');
-    whereVals.push(user.userId);
-  } else if (HAS_CLIENTE_FK.has(table) && clienteId) {
-    whereParts.push('id_cliente = ?');
-    whereVals.push(clienteId);
-  }
+  const sp = new URL(req.url).searchParams;
+  const whereParts: string[] = [scope.sql];
+  const whereVals: unknown[] = [...scope.vals];
 
   for (const [key, val] of sp.entries()) {
     if (key.startsWith('_')) continue;
-    if (key === 'id_cliente') continue; // already injected above
-    if (key.endsWith(':like')) {
-      whereParts.push(`${key.slice(0, -5)} LIKE ?`);
-      whereVals.push(val);
-    } else if (key.endsWith(':gte')) {
-      whereParts.push(`${key.slice(0, -4)} >= ?`);
-      whereVals.push(val);
-    } else if (key.endsWith(':lte')) {
-      whereParts.push(`${key.slice(0, -4)} <= ?`);
-      whereVals.push(val);
-    } else {
-      whereParts.push(`${key} = ?`);
-      whereVals.push(val);
-    }
+    let col = key;
+    let op = '=';
+    if (key.endsWith(':like')) { col = key.slice(0, -5); op = 'LIKE'; }
+    else if (key.endsWith(':gte')) { col = key.slice(0, -4); op = '>='; }
+    else if (key.endsWith(':lte')) { col = key.slice(0, -4); op = '<='; }
+    if (!colOk(table, col)) return bad(`Columna no válida: ${col}`);
+    if (col === 'id_cliente' || col === 'user_id') continue; // el alcance lo fija la sesión
+    whereParts.push(`${col} ${op} ?`);
+    whereVals.push(val);
   }
 
-  const where = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
-  const order = sp.get('_order') ? `ORDER BY ${sp.get('_order')} ${sp.get('_desc') === '1' ? 'DESC' : 'ASC'}` : '';
-  const isSingle = sp.get('_single') === '1';
-  const needCount = sp.get('_count') === '1';
+  let order = '';
+  const orderCol = sp.get('_order');
+  if (orderCol) {
+    if (!colOk(table, orderCol)) return bad(`Columna de orden no válida: ${orderCol}`);
+    order = `ORDER BY ${orderCol} ${sp.get('_desc') === '1' ? 'DESC' : 'ASC'}`;
+  }
 
+  const where = `WHERE ${whereParts.join(' AND ')}`;
   const selectCols = table === 'registros_606'
     ? '*, (monto_servicios + monto_bienes) as total_facturado'
     : '*';
-
   const db = getDB();
 
-  if (isSingle) {
-    const row = db.prepare(`SELECT ${selectCols} FROM ${table} ${where} LIMIT 1`).get(...whereVals);
+  if (sp.get('_single') === '1') {
+    const row = db.prepare(`SELECT ${selectCols} FROM ${table} ${where} LIMIT 1`).get(...(whereVals as never[]));
     if (!row) return NextResponse.json({ data: null, error: { message: 'Not found' } }, { status: 404 });
     return NextResponse.json({ data: deserializeRow(row as Record<string, unknown>, table), error: null });
   }
 
-  const rangeStr = sp.get('_range');
-  let limit = parseInt(sp.get('_limit') || '100');
+  let limit = Math.min(Math.max(parseInt(sp.get('_limit') || '100', 10) || 100, 1), MAX_LIMIT);
   let offset = 0;
+  const rangeStr = sp.get('_range');
   if (rangeStr) {
     const [from, to] = rangeStr.split(',').map(Number);
-    offset = from;
-    limit = to - from + 1;
+    if (Number.isFinite(from) && Number.isFinite(to) && to >= from) {
+      offset = Math.max(0, from);
+      limit = Math.min(to - from + 1, MAX_LIMIT);
+    }
   }
 
   let count: number | undefined;
-  if (needCount) {
-    const cr = db.prepare(`SELECT COUNT(*) as n FROM ${table} ${where}`).get(...whereVals) as { n: number };
+  if (sp.get('_count') === '1') {
+    const cr = db.prepare(`SELECT COUNT(*) as n FROM ${table} ${where}`).get(...(whereVals as never[])) as { n: number };
     count = cr.n;
   }
 
   const rows = db.prepare(`SELECT ${selectCols} FROM ${table} ${where} ${order} LIMIT ? OFFSET ?`)
-    .all(...whereVals, limit, offset);
+    .all(...(whereVals as never[]), limit, offset);
 
   return NextResponse.json({
     data: rows.map(r => deserializeRow(r as Record<string, unknown>, table)),
@@ -105,35 +127,31 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
 }
 
 export async function POST(req: NextRequest, { params }: { params: Params }) {
-  const { table } = await params;
-  if (!ALLOWED.has(table)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const auth = await authorize(req, params);
+  if ('error' in auth) return auth.error;
+  const { table, user, scope } = auth;
 
-  const user = await getSessionUserFromRequest(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const body = await req.json().catch(() => null) as Record<string, unknown> | null;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return bad('Cuerpo inválido');
 
-  const body = await req.json();
-  const db = getDB();
-
-  // Inject ownership
-  if (table === 'clientes') body.user_id = user.userId;
-  if (HAS_CLIENTE_FK.has(table)) {
-    const clienteId = await getClienteId(user.userId);
-    if (!clienteId && table !== 'auditoria_registros') {
-      return NextResponse.json({ error: 'Cliente no encontrado para este usuario' }, { status: 400 });
-    }
-    if (clienteId) body.id_cliente = body.id_cliente || clienteId;
+  for (const k of Object.keys(body)) {
+    if (!colOk(table, k)) return bad(`Campo no válido: ${k}`);
   }
 
-  const id = body.id || crypto.randomUUID();
-  body.id = id;
+  // Dueño fijo: el cliente de la sesión, aunque el cuerpo traiga otro.
+  const data: Record<string, unknown> = { ...body };
+  if (table === 'clientes') data.user_id = user.userId;
+  else if (HAS_CLIENTE_FK.has(table)) data.id_cliente = scope.vals[0];
+  data.id = typeof body.id === 'string' && body.id ? body.id : crypto.randomUUID();
 
-  const cols = Object.keys(body);
+  const cols = Object.keys(data);
   const placeholders = cols.map(() => '?').join(', ');
-  const vals = cols.map(c => serializeValue(body[c]));
+  const vals = cols.map(c => serializeValue(data[c]));
+  const db = getDB();
 
   try {
-    db.prepare(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`).run(...vals);
-    const inserted = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+    db.prepare(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`).run(...(vals as never[]));
+    const inserted = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(data.id);
     return NextResponse.json({ data: deserializeRow(inserted as Record<string, unknown>, table), error: null }, { status: 201 });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Error';
@@ -143,43 +161,47 @@ export async function POST(req: NextRequest, { params }: { params: Params }) {
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Params }) {
-  const { table } = await params;
-  if (!ALLOWED.has(table)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const auth = await authorize(req, params);
+  if ('error' in auth) return auth.error;
+  const { table, scope } = auth;
 
-  const user = await getSessionUserFromRequest(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const id = new URL(req.url).searchParams.get('id');
+  if (!id) return bad('id requerido');
 
-  const url = new URL(req.url);
-  const id = url.searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
-
-  const body = await req.json();
-  // Remove fields that shouldn't be updated
+  const body = await req.json().catch(() => null) as Record<string, unknown> | null;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return bad('Cuerpo inválido');
   delete body.id;
   delete body.id_cliente;
   delete body.user_id;
 
-  const db = getDB();
-  const setCols = Object.keys(body).map(k => `${k} = ?`).join(', ');
-  const setVals = Object.values(body).map(v => serializeValue(v));
+  const keys = Object.keys(body);
+  if (!keys.length) return bad('Nada que actualizar');
+  for (const k of keys) {
+    if (!colOk(table, k)) return bad(`Campo no válido: ${k}`);
+  }
 
-  db.prepare(`UPDATE ${table} SET ${setCols} WHERE id = ?`).run(...setVals, id);
-  const updated = db.prepare(`SELECT *, (monto_servicios + monto_bienes) as total_facturado FROM ${table} WHERE id = ?`).get(id);
-  return NextResponse.json({ data: updated ? deserializeRow(updated as Record<string, unknown>, table) : null, error: null });
+  const db = getDB();
+  const setCols = keys.map(k => `${k} = ?`).join(', ');
+  const setVals = keys.map(k => serializeValue(body[k]));
+  // Solo actualiza si el registro pertenece a la sesión.
+  const info = db.prepare(`UPDATE ${table} SET ${setCols} WHERE id = ? AND ${scope.sql}`)
+    .run(...(setVals as never[]), id, ...(scope.vals as never[]));
+  if (info.changes === 0) return bad('Not found', 404);
+
+  const updated = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+  return NextResponse.json({ data: deserializeRow(updated as Record<string, unknown>, table), error: null });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Params }) {
-  const { table } = await params;
-  if (!ALLOWED.has(table)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const auth = await authorize(req, params);
+  if ('error' in auth) return auth.error;
+  const { table, scope } = auth;
 
-  const user = await getSessionUserFromRequest(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const id = new URL(req.url).searchParams.get('id');
+  if (!id) return bad('id requerido');
 
-  const url = new URL(req.url);
-  const id = url.searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
-
-  const db = getDB();
-  db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
+  const info = getDB().prepare(`DELETE FROM ${table} WHERE id = ? AND ${scope.sql}`)
+    .run(id, ...(scope.vals as never[]));
+  if (info.changes === 0) return bad('Not found', 404);
   return NextResponse.json({ data: null, error: null });
 }
